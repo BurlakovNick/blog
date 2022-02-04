@@ -1,12 +1,11 @@
-# How to build blog
+# How to build
 
-
+1. Set up integration in Notion page
+2. Share necessary pages with bot
+3. Add pretty urls for pages in `config.ini`
+4. Run
+`export NOTION_TOKEN={{secret API key}}`
+5. Run
 ```
-pip install notion-client
-
-add internal notion integration 
-
-SHARE page with bot
-
-https://sreeram-venkitesh.github.io/notion.css/
+python main.py
 ```

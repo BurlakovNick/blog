@@ -25,8 +25,13 @@ h6 {
 }
 
 p, div, img {
-    margin-top: 0.8em;
-    margin-bottom: 0.8em;
+    margin-top: 1.0em;
+    margin-bottom: 1.0em;
+}
+
+.child-page {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
 }
 
 strong,
@@ -322,4 +327,24 @@ pre > code {
 
 code {
     font-family: "Ubuntu Mono", "Lucida Console", Courier, monospace;
+}
+
+.flex-container {
+    display: flex;
+    flex-flow: row nowrap;
+    align-content: space-between;
+    margin-top: -10px;
+}
+
+.flex-child {
+    flex: 0 0 50%;
+    margin: 0;
+    padding: 0;
+    padding-right: 10px;
+}
+
+@media screen and (max-width:768px) {
+  .flex-container {
+    flex-flow: column nowrap;
+  }
 }
