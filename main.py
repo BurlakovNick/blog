@@ -27,14 +27,14 @@ def get_url(page_id: str) -> str:
     page_id = page_id.replace("-", "")
     if page_id == main_page_id:
         return ""
-    return page_id_to_url.get(page_id, page_id) + ".html"
+    return page_id_to_url.get(page_id, page_id)
 
 
 def download_image(url: str, image_id: str) -> str:
     extention = os.path.splitext(urlparse(url).path)[1]
     print(f"Downloading image {url}, extention {extention}")
     image_name = f"{image_id}{extention}"
-    urllib.request.urlretrieve(url, f"www/img/{image_name}")
+    urllib.request.urlretrieve(url, f"docs/img/{image_name}")
     return image_name
 
 
@@ -92,7 +92,7 @@ def write_built_pages(built: dict[str, str]):
 
 
 def write_html(page_id: str, html: str):
-    with open(f"www/{get_html_file_name(page_id)}.html", "w+") as f:
+    with open(f"docs/{get_html_file_name(page_id)}.html", "w+") as f:
         return f.write(html)
 
 
@@ -212,12 +212,14 @@ def build_html(page: dict, page_id: str) -> str:
     print(f"Page id: {page_id}, title: {title}")
 
     # Pretty CSS inspired by https://sreeram-venkitesh.github.io/notion.css/
-    html = '<html>' \
-           '<head></head>' \
-           '<body>' \
-           '<link rel="stylesheet" href="bear.css"/>' \  
-           '<link rel="icon" href="/favicon.svg">' \
-           '<div>'
+    html = (
+        '<html>' +
+        f'<head><title>{title}</title></head>' +
+        '<body>' +
+        '<link rel="stylesheet" href="bear.css"/>' +
+        '<link rel="icon" href="favicon.svg">' +
+        '<div>'
+    )
     html += f"<h1 class='page_title' style='margin-top: 0.5em;'>{icon} {title}</h1>"
     html += build_children(page_id)
     html += "</div></body></html>"
