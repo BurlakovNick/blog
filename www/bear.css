@@ -20,6 +20,13 @@ h5,
 h6 {
     color: #222;
     font-family: Verdana, serif;
+    margin-top: 1.2em;
+    margin-bottom: 0.5px;
+}
+
+p, div, img {
+    margin-top: 0.8em;
+    margin-bottom: 0.8em;
 }
 
 strong,
@@ -28,8 +35,11 @@ b {
 }
 
 a {
-    color: #3273dc;
+    color: rgb(55, 53, 47);
     /*color: #ff5e6c;*/
+    text-decoration: underline;
+    text-decoration-color: rgba(55, 53, 47, 0.16);
+    text-underline-offset: 4px;
 }
 
 .title {

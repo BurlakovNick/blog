@@ -129,9 +129,6 @@ def build_text(text_items: list[dict]) -> str:
 
 def get_page_title(page: dict) -> str:
     title = build_text(page["properties"]["title"]["title"])
-    if page.get("icon"):
-        icon = page["icon"]["emoji"]
-        return icon + " " + title
     return title
 
 
@@ -188,8 +185,12 @@ def build_children(root_block_id: str) -> str:
             content = f'<div><img src="img/{image_name}"></img><div>{caption}</div></div>'
         elif block_type == "child_page":
             child_page_id = block["id"]
-            title = get_page_title(get_page(child_page_id))
-            content = wrap(wrap_link(title, get_url(child_page_id)), "div")
+            child_page = get_page(child_page_id)
+            link = wrap_link(get_page_title(child_page), get_url(child_page_id))
+            if child_page.get("icon"):
+                emoji = f'<span style="font-size: 1.2em; margin-right: 2px;">{child_page["icon"]["emoji"]}</span>'
+                link = emoji + link
+            content = f'<p>{link}</p>'
         elif block_type == "column_list":
             content = wrap(build_children(block["id"]), "div")
         elif block_type == "column":
@@ -205,10 +206,11 @@ def build_children(root_block_id: str) -> str:
 
 def build_html(page: dict, page_id: str) -> str:
     title = get_page_title(page)
+    icon = page["icon"]["emoji"]
     print(f"Page id: {page_id}, title: {title}")
 
     html = '<html><head></head><body><link rel="stylesheet" href="bear.css"/><div>'
-    html += f"<h1 class='page_title'>{title}</h1>"
+    html += f"<h1 class='page_title' style='margin-top: 0.5em;'>{icon} {title}</h1>"
     html += build_children(page_id)
     html += "</div></body></html>"
     return html
