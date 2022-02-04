@@ -214,10 +214,12 @@ def build_html(page: dict, page_id: str) -> str:
     # Pretty CSS inspired by https://sreeram-venkitesh.github.io/notion.css/
     html = (
         '<html>' +
-        f'<head><title>{title}</title></head>' +
-        '<body>' +
+        '<head>' +
+        f'<title>{title}</title>' +
         '<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑‍💻</text></svg>">'
         '<link rel="stylesheet" href="bear.css"/>' +
+        '</head>' +
+        '<body>' +
         '<div>'
     )
     html += f"<h1 class='page_title' style='margin-top: 0.5em;'>{icon} {title}</h1>"

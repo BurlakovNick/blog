@@ -349,6 +349,10 @@ code {
   }
 }
 
+ul, ol {
+    margin-top: -0.8em;
+}
+
 li {
-    margin-bottom: 0.1em;
+    margin-bottom: 0.2em;
 }
