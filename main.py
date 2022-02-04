@@ -215,6 +215,9 @@ def build_html(page: dict, page_id: str) -> str:
     html = (
         '<html>' +
         '<head>' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=0">' +
+        '<meta name="title" content="Nick is typing...">' +
+        '<meta name="description" content="Personal page with not-so-random shit">'
         f'<title>{title}</title>' +
         '<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑‍💻</text></svg>">'
         '<link rel="stylesheet" href="bear.css"/>' +
