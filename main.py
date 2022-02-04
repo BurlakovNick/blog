@@ -4,8 +4,7 @@ import urllib.request
 import configparser
 from html import escape
 from json import JSONDecodeError
-from xml.dom import minidom
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -13,7 +12,6 @@ config.read("config.ini")
 auth_token = os.environ.get("NOTION_TOKEN")
 notion_api_version = config["parser"]["notion_api_version"]
 force_rebuild = config["parser"]["force_rebuild"]
-pretty_html = config["parser"]["pretty_html"]
 main_page_id = config["parser"]["main_page"]
 page_id_to_url = {page_id: url for url, page_id in config["urls"].items()}
 
@@ -29,16 +27,15 @@ def get_url(page_id: str) -> str:
     page_id = page_id.replace("-", "")
     if page_id == main_page_id:
         return ""
-    return page_id_to_url.get(page_id, page_id)
+    return page_id_to_url.get(page_id, page_id) + ".html"
 
 
-def prettify_html(html: str) -> str:
-    return minidom.parseString(html).toprettyxml()
-
-
-def download_image(url: str, image_name: str):
-    print(f"Downloading image {url}")
-    urllib.request.urlretrieve(url, f"www/{image_name}")
+def download_image(url: str, image_id: str) -> str:
+    extention = os.path.splitext(urlparse(url).path)[1]
+    print(f"Downloading image {url}, extention {extention}")
+    image_name = f"{image_id}{extention}"
+    urllib.request.urlretrieve(url, f"www/img/{image_name}")
+    return image_name
 
 
 def fetch(url: str) -> dict:
@@ -174,7 +171,7 @@ def build_children(root_block_id: str) -> str:
         elif block_type == "numbered_list_item":
             content = text("li", block[block_type]["text"])
         elif block_type == "code":
-            content = text("code", block[block_type]["text"])
+            content = wrap(text("code", block[block_type]["text"]), "pre")
         elif block_type == "quote":
             content = text("q", block[block_type]["text"])
         elif block_type == "heading_1":
@@ -187,9 +184,8 @@ def build_children(root_block_id: str) -> str:
             caption = build_text(block["image"]["caption"])
             image_type = block["image"]["type"]
             image_url = block["image"][image_type]["url"]
-            image_name = block["id"] + ".jpg"
-            download_image(image_url, image_name)
-            content = f'<div><img src="{image_name}"></img><div>{caption}</div></div>'
+            image_name = download_image(image_url, block["id"])
+            content = f'<div><img src="img/{image_name}"></img><div>{caption}</div></div>'
         elif block_type == "child_page":
             child_page_id = block["id"]
             title = get_page_title(get_page(child_page_id))
@@ -211,7 +207,7 @@ def build_html(page: dict, page_id: str) -> str:
     title = get_page_title(page)
     print(f"Page id: {page_id}, title: {title}")
 
-    html = '<html><head></head><body><link rel="stylesheet" href="style.css"/><div>'
+    html = '<html><head></head><body><link rel="stylesheet" href="bear.css"/><div>'
     html += f"<h1 class='page_title'>{title}</h1>"
     html += build_children(page_id)
     html += "</div></body></html>"
@@ -229,9 +225,6 @@ for page_id in [main_page_id, *page_id_to_url.keys()]:
         print(f"Skip build page {page_id}, already built")
         continue
     html = build_html(page, page_id)
-    print(html)
-    if pretty_html:
-        html = prettify_html(html)
     write_html(page_id, html)
 
 write_built_pages(built)
