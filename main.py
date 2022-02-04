@@ -190,7 +190,7 @@ def build_children(root_block_id: str) -> str:
             child_page = get_page(child_page_id)
             link = wrap_link(get_page_title(child_page), get_url(child_page_id))
             if child_page.get("icon"):
-                emoji = f'<span style="font-size: 1.2em; margin-right: 2px;">{child_page["icon"]["emoji"]}</span>'
+                emoji = f'<span style="font-size: 1.2em; margin-right: 5px;">{child_page["icon"]["emoji"]}</span>'
                 link = emoji + link
             content = f'<p class="child-page">{link}</p>'
         elif block_type == "column_list":

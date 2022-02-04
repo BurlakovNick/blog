@@ -41,10 +41,16 @@ b {
 
 a {
     color: rgb(55, 53, 47);
-    /*color: #ff5e6c;*/
     text-decoration: underline;
     text-decoration-color: rgba(55, 53, 47, 0.16);
     text-underline-offset: 4px;
+}
+
+.child-page:hover {
+    cursor: pointer !important;
+    background: rgba(148, 148, 148, 0.15);
+    box-shadow: 0 0 0 3px rgba(148, 148, 148, 0.15);
+    border-radius: 1px;
 }
 
 .title {
@@ -296,13 +302,18 @@ ul.discover-posts li small a {
 
     a {
         color: #8cc2dd;
+        text-decoration: underline;
+        text-decoration-color: rgba(140, 194, 221, 0.16);
+        text-underline-offset: 4px;
     }
 
     code {
-        background-color: #777;
+        background: #161f27;
+        color: #ddd;
     }
 
     pre code {
+        background: #161f27;
         color: #ddd;
     }
 
