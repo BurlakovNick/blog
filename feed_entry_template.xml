@@ -1,0 +1,14 @@
+<entry>
+    <title>{{title}}</title>
+    <link rel="alternate" type="text/html" href="{{url}}"/>
+    <id>{{url}}</id>
+    <published>{{date}}</published>
+    <updated>{{date}}</updated>
+    <content type="html">
+        <![CDATA[ {{content}} ]]>
+    </content>
+    <author>
+        <name>Nick Burlakov</name>
+        <email>nick@istyping.cc</email>
+    </author>
+</entry>

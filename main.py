@@ -1,11 +1,14 @@
+import datetime
 import json
 import os
 import urllib.request
 import configparser
+import xml.etree.ElementTree
 from html import escape
 from json import JSONDecodeError
 from typing import Optional
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
+from xml.dom import minidom
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -14,7 +17,14 @@ auth_token = os.environ.get("NOTION_TOKEN")
 notion_api_version = config["parser"]["notion_api_version"]
 force_rebuild = config["parser"]["force_rebuild"]
 main_page_id = config["parser"]["main_page"]
+page_url_to_id = config["urls"]
+feed_entries = [(url, datetime.datetime.strptime(date, "%Y-%m-%d")) for url, date in config["feed"].items()]
+
 page_id_to_url = {page_id: url for url, page_id in config["urls"].items()}
+
+for url, _ in feed_entries:
+    if url not in page_url_to_id.keys():
+        raise RuntimeError(f"Feed entry {url} is not in config urls")
 
 
 def get_html_file_name(page_id: str) -> str:
@@ -230,22 +240,54 @@ def build_html(page: dict, page_id: str) -> str:
     html = (
         '<html>' +
         '<head>' +
-        '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=0">' +
-        '<meta name="title" content="Nick is typing...">' +
-        '<meta name="description" content="Personal page with not-so-random shit">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=0"></meta>' +
+        '<meta name="title" content="Nick is typing..."></meta>' +
+        '<meta name="description" content="Personal page with not-so-random shit"></meta>'
         f'<title>{title}</title>' +
-        '<link rel="icon" href="favicon.png">' +
-        '<link rel="apple-touch-icon" href="favicon.png">' +
-        '<link rel="stylesheet" href="bear.css"/>' +
+        '<link rel="icon" href="favicon.png"></link>' +
+        '<link rel="apple-touch-icon" href="favicon.png"></link>' +
+        '<link rel="stylesheet" href="bear.css"></link>' +
         '</head>' +
         '<body>' +
         home_link +
-        '<div class="main">'
+        "<div class='main'>"
     )
     html += f"<h1 class='page_title' style='margin-top: 0.5em;'>{icon} {title}</h1>"
     html += build_children(page_id)
     html += "</div></body></html>"
     return html
+
+
+def substitute(template: str, vars: dict):
+    for name, value in vars.items():
+        template = template.replace("{{" + name + "}}", value)
+    return template
+
+
+def create_atom_feed():
+    updated = str(feed_entries[0][1])
+    entries = []
+    for url, date in feed_entries:
+        tree = xml.etree.ElementTree.parse(f"docs/{url}.html")
+        div = tree.getroot().find(".//div[@class='main']")
+        content = xml.etree.ElementTree.tostring(div, encoding='unicode', method='xml')
+        entries.append({
+            "url": url,
+            "date": str(date),
+            "title": get_page_title(get_page(page_url_to_id[url])),
+            "content": content
+        })
+    with open("feed_template.xml", "r") as feed_template_file, open("feed_entry_template.xml", "r") as feed_entry_template_file:
+        feed_template = feed_template_file.read()
+        feed_entry_template = feed_entry_template_file.read()
+
+        entries_xml = ""
+        for entry in entries:
+            entries_xml += substitute(feed_entry_template, entry)
+        feed = substitute(feed_template, {"updated": updated, "entries": entries_xml})
+        feed = "\n".join([line for line in minidom.parseString(feed).toprettyxml(indent=' ' * 2).split("\n") if line.strip()])
+        with open("docs/atom.xml", "w") as f:
+            f.write(feed)
 
 
 built: dict[str, str] = {}
@@ -262,3 +304,4 @@ for page_id in [main_page_id, *page_id_to_url.keys()]:
     write_html(page_id, html)
 
 write_built_pages(built)
+create_atom_feed()

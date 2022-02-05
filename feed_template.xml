@@ -1,0 +1,13 @@
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-US">
+    <title>Nick is typing</title>
+    <subtitle>Nick Burlakov's blog</subtitle>
+    <link type="application/atom+xml" href="https://nick.istyping.cc/atom.xml" rel="self"/>
+    <link rel="alternate" type="text/html" href="https://nick.istyping.cc/"/>
+    <id>https://nick.istyping.cc/</id>
+    <updated>{{updated}}</updated>
+    <author>
+        <name>Nick Burlakov</name>
+        <email>nick@istyping.cc</email>
+    </author>
+    {{entries}}
+</feed>
