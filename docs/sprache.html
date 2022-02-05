@@ -6,9 +6,154 @@
 &lt;list&gt; := &lt;word&gt; | &lt;word&gt; &quot;,&quot; &lt;list&gt;
 &lt;should&gt; := &quot;[&quot; &lt;list&gt; &quot;]&quot;
 &lt;must&gt; := &quot;(&quot; &lt;list&gt; &quot;)&quot;
-&lt;expr&gt; := &lt;word&gt; | &lt;must&gt; | &lt;should&gt;</code></pre><p>Проще простого! Давайте напишем наивную реализацию парсера. Для этого воспользуемся дедовским подходом, который выручал еще на парах по алгоритмам в университете:</p><ul><li>Запомним текущее слово. Будем дописывать к нему новый символ, если встретим его (и символ не будет скобкой или запятой);</li><li>Заведем стек для запоминания последовательности открытых скобок;</li><li>Вместе с открытой скобкой будем хранить список из построенных фильтров внутри этой скобки.</li></ul><p>Посмотрим на реализацию парсера на <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/NaiveFilterParser.cs">github</a>.</p><p>Мерлинова борода! Получилось не так-то просто. Почти сто строк кода, множество условий, низкоуровневая работа со стеком — ужас!</p><p>В наивном подходе я вижу несколько проблем:</p><ul><li>Код парсера лапшеобразный, в него страшно добавлять новые фичи;</li><li>Есть несколько крайних случаев, которые легко пропустить (модульными тестами я отловил 3 бага перед тем, как этот код заработал);</li><li>И код совершенно не отображает грамматику, которую мы разбираем.</li></ul><p>Но ведь грамматика языка простая! Не должно быть так сложно. Хочется получить парсер автоматически, просто скормив машине описание грамматики. Можно ли так сделать? Оказывается, можно!</p><h2>Монадические комбинаторы парсеров</h2><p>Один из подходов к построению парсеров — представить простые парсерсы в виде функций, а затем научиться комбинировать их с помощью функций высшего порядка (комбинаторов).</p><p>Попытаюсь доступно изложить идею. За хардкором отсылаю к статье — <a href="http://www.cs.nott.ac.uk/~pszgmh/monparsing.pdf">Hutton, Meijer, Monadic parser combinators</a>.</p><p>Парсер — это функция, которая принимает строку, пытается распарсить какое-то выражение и говорит, какую часть входной строки осталось разобрать:</p><script src="https://gist.github.com/BurlakovNick/3bbfc6da2f58ec7eb9abd5990a1a1a69.js"></script><p><code>IInput</code> — итератор по входным данным парсера, помогает получить текущий символ (<code>Current</code>) и двинуться дальше (<code>Advance</code>).</p><p>Простой пример парсера — парсер единственного символа:</p><script src="https://gist.github.com/BurlakovNick/33ed643ebe9e85c912f274dbdfcc57dc.js"></script><p>Парсер для одиночного символа прост — мы либо встретили нужный символ (и тогда двигаем итератор <code>input</code> дальше), либо распарсить символ не получилось. Пользоваться готовым парсером так же легко, как и любым делегатом — нужно лишь вызвать готовый парсер и передать ему на вход какой-то текст, например:</p><script src="https://gist.github.com/BurlakovNick/1d701c469f72fb9d64057c6c03bafb68.js"></script><p>Из простых парсеров можно собирать сложные с помощью комбинаторов — функций, которые принимают на вход другие парсеры и создают из них нечто большее.</p><p>Самый простой комбинатор — <code>Or</code>. Например, распарсим букву <code>a</code> или букву <code>b</code>:</p><script src="https://gist.github.com/BurlakovNick/1ae452a60414d7333fb71fe5a3601c4b.js"></script><p>С помощью комбинатора <code>Many</code> можно сделать парсер для слова, состоящего из одних лишь букв:</p><script src="https://gist.github.com/BurlakovNick/6a1f2ce6140559f23a3b53303bada477.js"></script><p>Или можно скомбинировать парсеры двух строк, идущих друг за другом, с помощью комбинатора <code>Then</code>:</p><script src="https://gist.github.com/BurlakovNick/725c852a0afdd1e1c7ec9ed9e5706dc4.js"></script><p>Здесь вместо парсера справа в <code>Then</code> передается делегат <code>Func&lt;string, Parser&lt;string&gt;&gt;</code>, аргумент которого — результат предыдущего парсера. Это необходимо, чтобы скомбинировать результаты двух парсеров.</p><p>Этих комбинаторов достаточно, чтобы написать парсер слов, заключенных в круглые скобки:</p><script src="https://gist.github.com/BurlakovNick/4081a2e49b3c64b4344ecc14d7a2b451.js"></script><h2>При чем здесь монады?</h2><p>Фишка в том, что парсер — это <a href="https://mikhail.io/2016/01/monads-explained-in-csharp/">монада</a> в чистом виде. Монада — это контейнер некоторого значения. У монады есть:</p><ul><li>Конструктор, который собирает монаду. В случае парсера — конструктор, который создает парсер одного символа;</li><li>Операция связывания (<code>bind</code>), которая позволяет комбинировать монады. В случае парсеров — это комбинаторы <code>Or</code>, <code>Then</code>, <code>Many</code> и другие.</li></ul><p>Абстракция монады часто применяется в отложенных вычислениях. Самые известные монады из языка C#:</p><ul><li>Монада списка <code>IEnumerable&lt;T&gt;</code> — позволяет выполнять отложенные вычисления над коллекциями элементов с помощью LINQ;</li><li>Монада задачи <code>Task&lt;T&gt;</code> — нужна для комбинирования асинхронных операций.</li></ul><h2>Реализация парсера с помощью Sprache</h2><p>Попробуем реализовать тот же парсер с помощью <a href="https://github.com/sprache/Sprache">Sprache</a> — легковесной библиотеки, в которой уже реализованы разные комбинаторы парсеров. Исходники смотри на <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/FilterParser.cs">Github</a>.</p><p>На выходе парсер должен вернуть <code>IFilter</code> — комбинацию фильтров <code>Must</code> и <code>Should</code>, собранную по скобочному выражению. Выражение, которое парсим — это одно слово или выражение <code>Must</code> или выражение <code>Should</code>.</p><script src="https://gist.github.com/BurlakovNick/3ff7fbc3235b21ad95fdac4c1a19a00d.js"></script><p>Для начала напишем парсер одного слова:</p><script src="https://gist.github.com/BurlakovNick/3fdfed79db81542ef91d185ca9c60cce.js"></script><p>Теперь научимся комбинировать слова с помощью разделителей:</p><script src="https://gist.github.com/BurlakovNick/c4e03b8d1b167c9d32e19fe2f9e68e98.js"></script><p>Метод <code>Parse.Ref</code> позволяет неявно сослаться на другой парсер, чтобы разорвать циклическую зависимость (<code>Expr</code> -&gt; <code>Should</code> -&gt; <code>List</code> -&gt; <code>Expr</code>). Фактическое вычисление (<code>() =&gt; Expr</code>) будет отложено до первого запроса к парсеру.</p><p>Распарсим выражение в скобках:</p><script src="https://gist.github.com/BurlakovNick/8323d760002c869f0078e57e75773d88.js"></script><p>Так, что за ерунда с <code>from</code> и <code>in</code>? Это хипстерский LINQ синтаксис — компилятор автоматически заменяет такие конструкции на цепочку вызовов, потому что в библиотеке Sprache объявлен метод <code>SelectMany</code>. По смыслу он делает то же самое, что и <code>Then</code>. То есть код с <code>from</code> эквивалентен такой записи:</p><script src="https://gist.github.com/BurlakovNick/5c249088f1a0a8a131cf36d41d37d704.js"></script><p>Синтаксис с <code>from</code> намного читаемее, на мой вкус!</p><p>Метод <code>Optional</code> пропускает часть выражения — она становится необязательной. Метод <code>GetOrDefault()</code> нужен, чтобы получить результат парсинга <code>Optional</code>-выражения.</p><p>И наконец, можно воспользоваться готовым парсером:</p><script src="https://gist.github.com/BurlakovNick/3d158275fb0b6067c1e616159d1c01b9.js"></script><p>Теперь давайте сравним <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/NaiveFilterParser.cs">наивный парсер</a> и <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/FilterParser.cs">умный</a>. Реализация с помощью Sprache компактнее и точь-в-точь совпадает с исходной грамматикой!</p><h2>Эффективность</h2><p>Большой ли оверхед у функционального подхода к написанию парсеров? Попробуем написать бенчмарк с помощью <a href="https://github.com/dotnet/BenchmarkDotNet">Benchmark.net</a>.</p><p>Тестировать будем на двух несложных тестах:</p><ul><li>Тест с большой вложенностью скобок. Генерируется так — букву <code>x</code> заворачиваем в скобки <code>()</code>, полученное выражение заворачиваем в квадратные скобки <code>[]</code> — и так далее 500 раз. Итоговое выражение размножить раз 100 и записать в один список.</li><li>Тест с длинными списками. Запишем один большой список из 100 списков, в каждом из которых через запятую 500 раз повторим символ <code>x</code>.</li></ul><p>Исходный код бенчмарка на <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserBenchmark/Program.cs">Github</a>.</p><p>Итоговые результаты:</p><pre><code>Method   |                     Text |     Mean |     Error |    StdDev |   Median |
+&lt;expr&gt; := &lt;word&gt; | &lt;must&gt; | &lt;should&gt;</code></pre><p>Проще простого! Давайте напишем наивную реализацию парсера. Для этого воспользуемся дедовским подходом, который выручал еще на парах по алгоритмам в университете:</p><ul><li>Запомним текущее слово. Будем дописывать к нему новый символ, если встретим его (и символ не будет скобкой или запятой);</li><li>Заведем стек для запоминания последовательности открытых скобок;</li><li>Вместе с открытой скобкой будем хранить список из построенных фильтров внутри этой скобки.</li></ul><p>Посмотрим на реализацию парсера на <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/NaiveFilterParser.cs">github</a>.</p><p>Мерлинова борода! Получилось не так-то просто. Почти сто строк кода, множество условий, низкоуровневая работа со стеком — ужас!</p><p>В наивном подходе я вижу несколько проблем:</p><ul><li>Код парсера лапшеобразный, в него страшно добавлять новые фичи;</li><li>Есть несколько крайних случаев, которые легко пропустить (модульными тестами я отловил 3 бага перед тем, как этот код заработал);</li><li>И код совершенно не отображает грамматику, которую мы разбираем.</li></ul><p>Но ведь грамматика языка простая! Не должно быть так сложно. Хочется получить парсер автоматически, просто скормив машине описание грамматики. Можно ли так сделать? Оказывается, можно!</p><h2>Монадические комбинаторы парсеров</h2><p>Один из подходов к построению парсеров — представить простые парсерсы в виде функций, а затем научиться комбинировать их с помощью функций высшего порядка (комбинаторов).</p><p>Попытаюсь доступно изложить идею. За хардкором отсылаю к статье — <a href="http://www.cs.nott.ac.uk/~pszgmh/monparsing.pdf">Hutton, Meijer, Monadic parser combinators</a>.</p><p>Парсер — это функция, которая принимает строку, пытается распарсить какое-то выражение и говорит, какую часть входной строки осталось разобрать:</p><pre><code>public delegate IResult&lt;T&gt; Parser&lt;out T&gt;(IInput input);
+
+public interface IResult&lt;T&gt;
+{
+    bool Success { get; }
+    IInput Remainder { get; }
+    T ParsedValue { get; }
+}
+
+public interface IInput
+{
+    char Current { get; }
+    IInput Advance();
+}</code></pre><p><code>IInput</code> — итератор по входным данным парсера, помогает получить текущий символ (<code>Current</code>) и двинуться дальше (<code>Advance</code>).</p><p>Простой пример парсера — парсер единственного символа:</p><pre><code>public static Parser&lt;string&gt; Char(char ch)
+{
+    return (Parser&lt;string&gt;)(input =&gt; {
+        if (input.Current == ch)
+            return Result.Success&lt;string&gt;(
+                input.Current.ToString(),
+                input.Advance());
+        else
+            return Result.Failure&lt;string&gt;(input);
+    });
+}</code></pre><p>Парсер для одиночного символа прост — мы либо встретили нужный символ (и тогда двигаем итератор <code>input</code> дальше), либо распарсить символ не получилось. Пользоваться готовым парсером так же легко, как и любым делегатом — нужно лишь вызвать готовый парсер и передать ему на вход какой-то текст, например:</p><pre><code>var result = Char(&#x27;a&#x27;)(&quot;abacaba&quot;);
+
+//Результат - &#x27;a&#x27;
+Console.WriteLine(result.Value);
+//Результат - &quot;bacaba&quot;
+Console.WriteLine(result.Remainder);</code></pre><p>Из простых парсеров можно собирать сложные с помощью комбинаторов — функций, которые принимают на вход другие парсеры и создают из них нечто большее.</p><p>Самый простой комбинатор — <code>Or</code>. Например, распарсим букву <code>a</code> или букву <code>b</code>:</p><pre><code>public static Parser&lt;T&gt; Or&lt;T&gt;(
+    this Parser&lt;T&gt; left,
+    Parser&lt;T&gt; right)
+{
+    return (Parser&lt;string&gt;)(input =&gt; {
+        var result = left(input);
+        return result.Success
+            ? result
+            : right(input);
+    });
+}
+
+var parser = Char(&#x27;a&#x27;).Or(Char(&#x27;b&#x27;));</code></pre><p>С помощью комбинатора <code>Many</code> можно сделать парсер для слова, состоящего из одних лишь букв:</p><pre><code>public static Parser&lt;string&gt; Letter()
+{
+    return (Parser&lt;string&gt;)(input =&gt; {
+        if (char.IsLetter(input.Current))
+            return Result.Success&lt;string&gt;(
+                input.Current.ToString(),
+                input.Advance());
+        else
+            return Result.Failure&lt;string&gt;(
+                input);
+    });
+}
+
+public static Parser&lt;IEnumerable&lt;T&gt;&gt; Many&lt;T&gt;(this Parser&lt;T&gt; parser)
+{
+    return Parser&lt;IEnumerable&lt;T&gt;&gt;(input =&gt; {
+        var list = new List&lt;T&gt;();
+        for (var result = parser(input);
+            result.Success;
+            result = parser(input))
+        {
+            list.Add(result.Value);
+            input = result.Remainder;
+        }
+        return Result.Success&lt;IEnumerable&lt;T&gt;&gt;(
+            (IEnumerable&lt;T&gt;) list, input);
+    });
+}
+
+var parser = Letter().Many();
+var result = parser(&quot;abc123&quot;);
+
+//Результат - &quot;abc&quot;
+Console.WriteLine(result.Value);
+//Результат - &quot;123&quot;
+Console.WriteLine(result.Remainder);</code></pre><p>Или можно скомбинировать парсеры двух строк, идущих друг за другом, с помощью комбинатора <code>Then</code>:</p><pre><code>public static Parser&lt;string&gt; Then(
+    this Parser&lt;string&gt; left,
+    Func&lt;string, Parser&lt;string&gt;&gt; right)
+{
+    return (Parser&lt;string&gt;)(input =&gt; {
+        var result = left(input);
+        if (!result.Success)
+        {
+            return result;
+        }
+        return right(result.Value)(result.Remainder);
+    });
+}</code></pre><p>Здесь вместо парсера справа в <code>Then</code> передается делегат <code>Func&lt;string, Parser&lt;string&gt;&gt;</code>, аргумент которого — результат предыдущего парсера. Это необходимо, чтобы скомбинировать результаты двух парсеров.</p><p>Этих комбинаторов достаточно, чтобы написать парсер слов, заключенных в круглые скобки:</p><pre><code>var wordParser =
+    Char(&#x27;(&#x27;)
+    .Then(left =&gt; (left, AnyLetter().Many())
+    .Then((left, word) =&gt; (left, word, Char(&#x27;)&#x27;)))
+    //левая и правая скобка не нужны, делаем discard параметров
+    //спасибо тебе, C# 7.0!
+    .Then((_, word, _) =&gt; word);</code></pre><h2>При чем здесь монады?</h2><p>Фишка в том, что парсер — это <a href="https://mikhail.io/2016/01/monads-explained-in-csharp/">монада</a> в чистом виде. Монада — это контейнер некоторого значения. У монады есть:</p><ul><li>Конструктор, который собирает монаду. В случае парсера — конструктор, который создает парсер одного символа;</li><li>Операция связывания (<code>bind</code>), которая позволяет комбинировать монады. В случае парсеров — это комбинаторы <code>Or</code>, <code>Then</code>, <code>Many</code> и другие.</li></ul><p>Абстракция монады часто применяется в отложенных вычислениях. Самые известные монады из языка C#:</p><ul><li>Монада списка <code>IEnumerable&lt;T&gt;</code> — позволяет выполнять отложенные вычисления над коллекциями элементов с помощью LINQ;</li><li>Монада задачи <code>Task&lt;T&gt;</code> — нужна для комбинирования асинхронных операций.</li></ul><h2>Реализация парсера с помощью Sprache</h2><p>Попробуем реализовать тот же парсер с помощью <a href="https://github.com/sprache/Sprache">Sprache</a> — легковесной библиотеки, в которой уже реализованы разные комбинаторы парсеров. Исходники смотри на <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/FilterParser.cs">Github</a>.</p><p>На выходе парсер должен вернуть <code>IFilter</code> — комбинацию фильтров <code>Must</code> и <code>Should</code>, собранную по скобочному выражению. Выражение, которое парсим — это одно слово или выражение <code>Must</code> или выражение <code>Should</code>.</p><pre><code>private static Parser&lt;IFilter&gt; Expr =&gt; Should.XOr(Must).XOr(Word);</code></pre><p>Для начала напишем парсер одного слова:</p><pre><code>private static Parser&lt;IFilter&gt; Word =&gt;
+    Parse
+        .LetterOrDigit
+        .AtLeastOnce()
+        .Text()
+        .Select(word =&gt; new WordFilter(word));</code></pre><p>Теперь научимся комбинировать слова с помощью разделителей:</p><pre><code>private static Parser&lt;IEnumerable&lt;IFilter&gt;&gt; List =&gt;
+    Parse.Ref(() =&gt; Expr)
+        .DelimitedBy(Parse.Chars(&#x27;,&#x27;, &#x27;;&#x27;));</code></pre><p>Метод <code>Parse.Ref</code> позволяет неявно сослаться на другой парсер, чтобы разорвать циклическую зависимость (<code>Expr</code> -&gt; <code>Should</code> -&gt; <code>List</code> -&gt; <code>Expr</code>). Фактическое вычисление (<code>() =&gt; Expr</code>) будет отложено до первого запроса к парсеру.</p><p>Распарсим выражение в скобках:</p><pre><code>private static Parser&lt;IFilter&gt; Should =&gt;
+    from left in Parse.Char(&#x27;[&#x27;)
+    from expr in List.Optional()
+    from right in Parse.Char(&#x27;]&#x27;)
+    select new ShouldFilter(expr.GetOrDefault()?.ToList());
+
+private static Parser&lt;IFilter&gt; Must =&gt;
+    from left in Parse.Char(&#x27;(&#x27;)
+    from expr in List.Optional()
+    from right in Parse.Char(&#x27;)&#x27;)
+    select new MustFilter(expr.GetOrDefault()?.ToList());</code></pre><p>Так, что за ерунда с <code>from</code> и <code>in</code>? Это хипстерский LINQ синтаксис — компилятор автоматически заменяет такие конструкции на цепочку вызовов, потому что в библиотеке Sprache объявлен метод <code>SelectMany</code>. По смыслу он делает то же самое, что и <code>Then</code>. То есть код с <code>from</code> эквивалентен такой записи:</p><pre><code>Parse
+    .Char(&#x27;(&#x27;)
+    .Then(left =&gt; (left, List.Optional()))
+    .Then((left, expr) =&gt; (left, expr, Char(&#x27;)&#x27;)
+    .Then((_, expr, _) =&gt;
+        new MustFilter(expr.GetOrDefault()?.ToList()));</code></pre><p>Синтаксис с <code>from</code> намного читаемее, на мой вкус!</p><p>Метод <code>Optional</code> пропускает часть выражения — она становится необязательной. Метод <code>GetOrDefault()</code> нужен, чтобы получить результат парсинга <code>Optional</code>-выражения.</p><p>И наконец, можно воспользоваться готовым парсером:</p><pre><code>public static IFilter BuildFromText(string text)
+{
+    var normalizedText = new string(
+        text
+        .Where(c =&gt; !char.IsWhiteSpace(c))
+        .ToArray());
+    var input = new Input(normalizedText);
+    var parser = Expr;
+    var parsed = parser(input);
+    if (!parsed.WasSuccessful)
+    {
+        throw new Exception(
+            $&quot;Message: {parsed.Message}, &quot; +
+            $&quot;Offset: {parsed.Remainder}&quot;);
+    }
+    return parsed.Value;
+}</code></pre><p>Теперь давайте сравним <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/NaiveFilterParser.cs">наивный парсер</a> и <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example1/FilterParser.cs">умный</a>. Реализация с помощью Sprache компактнее и точь-в-точь совпадает с исходной грамматикой!</p><h2>Эффективность</h2><p>Большой ли оверхед у функционального подхода к написанию парсеров? Попробуем написать бенчмарк с помощью <a href="https://github.com/dotnet/BenchmarkDotNet">Benchmark.net</a>.</p><p>Тестировать будем на двух несложных тестах:</p><ul><li>Тест с большой вложенностью скобок. Генерируется так — букву <code>x</code> заворачиваем в скобки <code>()</code>, полученное выражение заворачиваем в квадратные скобки <code>[]</code> — и так далее 500 раз. Итоговое выражение размножить раз 100 и записать в один список.</li><li>Тест с длинными списками. Запишем один большой список из 100 списков, в каждом из которых через запятую 500 раз повторим символ <code>x</code>.</li></ul><p>Исходный код бенчмарка на <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserBenchmark/Program.cs">Github</a>.</p><p>Итоговые результаты:</p><pre><code>Method   |                     Text |     Mean |     Error |    StdDev |   Median |
 -------- |------------------------- |---------:|----------:|----------:|---------:|
 Sprache  | (([([(...)])])) [100201] | 655.3 ms |  9.674 ms |  9.049 ms | 652.2 ms |
 Naive    | (([([(...)])])) [100201] | 651.9 ms | 12.898 ms | 27.487 ms | 639.8 ms |
 Sprache  | ([x,x(...)x,x]) [100201] | 206.8 ms |  1.667 ms |  1.559 ms | 206.4 ms |
-Naive    | ([x,x(...)x,x]) [100201] | 209.1 ms |  3.591 ms |  2.999 ms | 208.2 ms |</code></pre><p>Результаты практически не отличаются друг от друга. Разумеется, результат зависит от грамматики, поэтому если захотите распарсить мегабайтные файлы — лучше напишите свой бенчмарк.</p><h2>Пример DSL</h2><p>Если пример с парсингом скобочных последовательностей слишком простой, то давайте посмотрим на задачку из жизни.</p><p>На моей работе я делаю биллинг. Одна из фич биллинга — корректное формирование юридических и платежных документов по сделке с клиентом. Документы формируются по сложным бизнес-правилам, в которых черт ногу сломит. Бизнес-правила активно меняются — вместе с изменениями законодательства, появлением в биллинге новых тарифов и продуктов.</p><p>Проблема — поддержкой этих бизнес-правил занимаются, конечно же, разработчики. Это скучно (правила довольно однотипные) и совершенно не тиражируемо (число правил растет, а разработчиков на рынке не так уж и много).</p><p>Ок, давайте заберем у разработчиков скучную задачу по поддержке бизнес-правил! И отдадим кому-нибудь еще. Юристам, например, или еще каким-нибудь экспертам в предметной области (кто придумывает эти правила). Но есть один нюанс — юристы не умеют писать код :(</p><p>На помощь приходят <a href="https://en.wikipedia.org/wiki/Domain-specific_language">DSL</a> — предметно-ориентированный язык. Это специализированный язык для применения в конкретной предметной области. Например, можно придумать свой язык для описания бизнес-правил формирования документов. С лунапарком и девочками!</p><p>Представим правило формирования документа на таком языке:</p><script src="https://gist.github.com/BurlakovNick/78ee3a529e173f77c986f2e8c801b44f.js"></script><p>Правило — набор условий из <code>if</code>, <code>else</code> и булевых выражений. Эксперт может комбинировать простые знания о сделке — выставлен ли счет на постоплату (<code>Bill.IsPostpay</code>) или был ли договор с клиентом (<code>History.HasContract</code>), чтобы определить, нужно ли формировать документ по сделке. Проверку простых условий реализует разработчик (они меняются очень редко). А часто меняющиеся бизнес-правила живут отдельной жизнью.</p><p>Парсер для правил получается очень короткий. Исходный код <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example2/Parsers/RuleParser.cs">здесь</a>. Меньше 100 строк кода!</p><p>В парсере есть несколько ограничений, например:</p><ul><li>Нет поддержки ветви <code>else</code>;</li><li>Не поддерживаются скобочные выражения;</li><li>Сильно ограничен набор простых условий по сделке (на деле их намно-о-о-го больше!);</li><li>Не выводятся красивые сообщения об ошибках, если правило не соответствует грамматике.</li></ul><p>То есть это больше proof-of-concept, чем production-ready парсер. Но! Весь код системы правил и парсер я написал всего за 2 часа. Без Sprache ушло бы на порядок больше времени, чтобы распарсить такую грамматику.</p><p>Ну и комбинировать парсеры друг с другом с API Sprache — это кайф для разработчика :)</p><h2>Итого</h2><p>Если нужно распарсить сложный текст — не надо изобретать велосипед, используй готовые инструменты. Sprache прекрасно подходит, чтобы быстро наваять парсер.</p><p>Исходный код всех примеров есть на <a href="https://github.com/BurlakovNick/sprache-examples">github</a>. Остались вопросы — пиши, пообщаемся.</p></div></body></html>
+Naive    | ([x,x(...)x,x]) [100201] | 209.1 ms |  3.591 ms |  2.999 ms | 208.2 ms |</code></pre><p>Результаты практически не отличаются друг от друга. Разумеется, результат зависит от грамматики, поэтому если захотите распарсить мегабайтные файлы — лучше напишите свой бенчмарк.</p><h2>Пример DSL</h2><p>Если пример с парсингом скобочных последовательностей слишком простой, то давайте посмотрим на задачку из жизни.</p><p>На моей работе я делаю биллинг. Одна из фич биллинга — корректное формирование юридических и платежных документов по сделке с клиентом. Документы формируются по сложным бизнес-правилам, в которых черт ногу сломит. Бизнес-правила активно меняются — вместе с изменениями законодательства, появлением в биллинге новых тарифов и продуктов.</p><p>Проблема — поддержкой этих бизнес-правил занимаются, конечно же, разработчики. Это скучно (правила довольно однотипные) и совершенно не тиражируемо (число правил растет, а разработчиков на рынке не так уж и много).</p><p>Ок, давайте заберем у разработчиков скучную задачу по поддержке бизнес-правил! И отдадим кому-нибудь еще. Юристам, например, или еще каким-нибудь экспертам в предметной области (кто придумывает эти правила). Но есть один нюанс — юристы не умеют писать код :(</p><p>На помощь приходят <a href="https://en.wikipedia.org/wiki/Domain-specific_language">DSL</a> — предметно-ориентированный язык. Это специализированный язык для применения в конкретной предметной области. Например, можно придумать свой язык для описания бизнес-правил формирования документов. С лунапарком и девочками!</p><p>Представим правило формирования документа на таком языке:</p><pre><code>ContractRule: {
+    Product = Diadoc,
+    Logic = {
+        if (History.IsOfferScheme)
+            return false;
+
+        if (Bill.IsPostpay)
+            return false;
+
+        if (History.HasContract)
+            return false;
+
+        return Order.HasCloudCert || Order.HasSubscribeOrExtra;
+    }
+}</code></pre><p>Правило — набор условий из <code>if</code>, <code>else</code> и булевых выражений. Эксперт может комбинировать простые знания о сделке — выставлен ли счет на постоплату (<code>Bill.IsPostpay</code>) или был ли договор с клиентом (<code>History.HasContract</code>), чтобы определить, нужно ли формировать документ по сделке. Проверку простых условий реализует разработчик (они меняются очень редко). А часто меняющиеся бизнес-правила живут отдельной жизнью.</p><p>Парсер для правил получается очень короткий. Исходный код <a href="https://github.com/BurlakovNick/sprache-examples/blob/master/Parsers/ParserExamples/Example2/Parsers/RuleParser.cs">здесь</a>. Меньше 100 строк кода!</p><p>В парсере есть несколько ограничений, например:</p><ul><li>Нет поддержки ветви <code>else</code>;</li><li>Не поддерживаются скобочные выражения;</li><li>Сильно ограничен набор простых условий по сделке (на деле их намно-о-о-го больше!);</li><li>Не выводятся красивые сообщения об ошибках, если правило не соответствует грамматике.</li></ul><p>То есть это больше proof-of-concept, чем production-ready парсер. Но! Весь код системы правил и парсер я написал всего за 2 часа. Без Sprache ушло бы на порядок больше времени, чтобы распарсить такую грамматику.</p><p>Ну и комбинировать парсеры друг с другом с API Sprache — это кайф для разработчика :)</p><h2>Итого</h2><p>Если нужно распарсить сложный текст — не надо изобретать велосипед, используй готовые инструменты. Sprache прекрасно подходит, чтобы быстро наваять парсер.</p><p>Исходный код всех примеров есть на <a href="https://github.com/BurlakovNick/sprache-examples">github</a>. Остались вопросы — пиши, пообщаемся.</p></div></body></html>
