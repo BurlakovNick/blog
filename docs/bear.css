@@ -1,9 +1,20 @@
+.home-link {
+    font-size: 0.9em;
+    display: flex;
+    margin: 0px;
+    margin-bottom: -10px;
+    padding-left: 10px;
+}
+
+.main {
+    max-width: 720px;
+    margin: auto;
+}
 
 body {
-    font-family: Verdana, sans-serif;
     margin: auto;
     padding: 20px;
-    max-width: 720px;
+    font-family: Verdana, sans-serif;
     text-align: left;
     background-color: #fff;
     word-wrap: break-word;
@@ -29,11 +40,6 @@ p, div, img {
     margin-bottom: 1.0em;
 }
 
-.child-page {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
-}
-
 strong,
 b {
     color: #222;
@@ -46,7 +52,12 @@ a {
     text-underline-offset: 4px;
 }
 
-.child-page:hover {
+.page-link {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.page-link:hover {
     cursor: pointer !important;
     background: rgba(148, 148, 148, 0.15);
     box-shadow: 0 0 0 3px rgba(148, 148, 148, 0.15);

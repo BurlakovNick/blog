@@ -4,6 +4,7 @@ import urllib.request
 import configparser
 from html import escape
 from json import JSONDecodeError
+from typing import Optional
 from urllib.parse import quote, urlparse
 
 config = configparser.ConfigParser()
@@ -132,6 +133,19 @@ def get_page_title(page: dict) -> str:
     return title
 
 
+def get_link(url: str, title: str, icon: Optional[str]) -> str:
+    link = wrap_link(title, url)
+    if icon:
+        emoji = f'<span style="font-size: 1.2em; margin-right: 5px;">{icon}</span>'
+        link = emoji + link
+    return f'<div class="page-link">{link}</div>'
+
+
+def get_page_link(page_id: str) -> str:
+    page = get_page(page_id)
+    return get_link(get_url(page_id), get_page_title(page), (page.get("icon") or {}).get("emoji"))
+
+
 def build_children(root_block_id: str) -> str:
     html = ""
 
@@ -186,13 +200,7 @@ def build_children(root_block_id: str) -> str:
             if content:
                 content += f"<div>{caption}</div>"
         elif block_type == "child_page":
-            child_page_id = block["id"]
-            child_page = get_page(child_page_id)
-            link = wrap_link(get_page_title(child_page), get_url(child_page_id))
-            if child_page.get("icon"):
-                emoji = f'<span style="font-size: 1.2em; margin-right: 5px;">{child_page["icon"]["emoji"]}</span>'
-                link = emoji + link
-            content = f'<p class="child-page">{link}</p>'
+            content = get_page_link(block["id"])
         elif block_type == "column_list":
             content = f'<div class="flex-container">{build_children(block["id"])}</div>'
         elif block_type == "column":
@@ -211,6 +219,11 @@ def build_html(page: dict, page_id: str) -> str:
     icon = page["icon"]["emoji"]
     print(f"Page id: {page_id}, title: {title}")
 
+    if page_id != main_page_id:
+        home_link = f'<div class="home-link">{get_link("./", "Домой", "🏡")}</div>'
+    else:
+        home_link = ""
+
     # Pretty CSS inspired by https://sreeram-venkitesh.github.io/notion.css/
     html = (
         '<html>' +
@@ -219,12 +232,13 @@ def build_html(page: dict, page_id: str) -> str:
         '<meta name="title" content="Nick is typing...">' +
         '<meta name="description" content="Personal page with not-so-random shit">'
         f'<title>{title}</title>' +
-        '<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑‍💻</text></svg>">' +
-        '<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑‍💻</text></svg>">' +
+        '<link rel="icon" href="favicon.png">' +
+        '<link rel="apple-touch-icon" href="favicon.png">' +
         '<link rel="stylesheet" href="bear.css"/>' +
         '</head>' +
         '<body>' +
-        '<div>'
+        home_link +
+        '<div class="main">'
     )
     html += f"<h1 class='page_title' style='margin-top: 0.5em;'>{icon} {title}</h1>"
     html += build_children(page_id)
