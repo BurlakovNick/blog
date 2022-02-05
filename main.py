@@ -207,6 +207,8 @@ def build_children(root_block_id: str) -> str:
             content = f'<div class="flex-child">{build_children(block["id"])}</div>'
         elif block_type == "[empty]":
             content = ""
+        elif block_type == "embed" and "github" in block["embed"]["url"]:
+            content = f'<script src="{block["embed"]["url"]}.js"></script>'
         else:
             raise RuntimeError(f"Unknown block type {block['type']}")
 

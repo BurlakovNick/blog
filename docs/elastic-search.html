@@ -7,8 +7,7 @@
             }
         }
     }
-}
-</code></pre><p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html">Match Phrase</a> — то же самое, что Match, но требует от документа, чтобы слова встречались в правильном порядке. Не все слова обязаны идти строго друг за другом в тексте, можно настроить число слов, которые разделяют два искомых слова во фразе, с помощью параметра <code>slop</code>.</p><pre><code>{
+}</code></pre><p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html">Match Phrase</a> — то же самое, что Match, но требует от документа, чтобы слова встречались в правильном порядке. Не все слова обязаны идти строго друг за другом в тексте, можно настроить число слов, которые разделяют два искомых слова во фразе, с помощью параметра <code>slop</code>.</p><pre><code>{
     &quot;query&quot;: {
         &quot;match_phrase&quot; : {
             &quot;message&quot; : &quot;ищем точное вхождение фразы в тексте&quot;,
