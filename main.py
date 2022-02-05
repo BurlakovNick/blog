@@ -15,6 +15,7 @@ config.read("config.ini")
 
 auth_token = os.environ.get("NOTION_TOKEN")
 notion_api_version = config["parser"]["notion_api_version"]
+base_url = config["parser"]["base_url"]
 force_rebuild = config["parser"]["force_rebuild"]
 main_page_id = config["parser"]["main_page"]
 page_url_to_id = config["urls"]
@@ -38,7 +39,7 @@ def get_url(page_id: str) -> str:
     page_id = page_id.replace("-", "")
     if page_id == main_page_id:
         return ""
-    return page_id_to_url.get(page_id, page_id)
+    return base_url + "/" + page_id_to_url.get(page_id, page_id)
 
 
 def download_image(url: str, image_id: str) -> str:
@@ -206,7 +207,7 @@ def build_children(root_block_id: str) -> str:
             image_type = block["image"]["type"]
             image_url = block["image"][image_type]["url"]
             image_name = download_image(image_url, block["id"])
-            content = f'<img src="img/{image_name}" style="display: block; margin-left: auto; margin-right: auto"></img>'
+            content = f'<img src="{base_url}/img/{image_name}" style="display: block; margin-left: auto; margin-right: auto"></img>'
             if content:
                 content += f"<div>{caption}</div>"
         elif block_type == "child_page":
