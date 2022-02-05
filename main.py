@@ -271,6 +271,9 @@ def create_atom_feed():
     for url, date in feed_entries:
         tree = xml.etree.ElementTree.parse(f"docs/{url}.html")
         div = tree.getroot().find(".//div[@class='main']")
+        page_title = next(child for child in div)
+        div.remove(page_title)
+
         content = xml.etree.ElementTree.tostring(div, encoding='unicode', method='xml')
         entries.append({
             "url": url,
