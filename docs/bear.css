@@ -62,6 +62,7 @@ a {
     background: rgba(148, 148, 148, 0.15);
     box-shadow: 0 0 0 3px rgba(148, 148, 148, 0.15);
     border-radius: 1px;
+    display: inline-block;
 }
 
 .title {
