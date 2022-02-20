@@ -19,8 +19,8 @@ base_url = config["parser"]["base_url"]
 force_rebuild = config["parser"]["force_rebuild"]
 main_page_id = config["parser"]["main_page"]
 page_url_to_id = config["urls"]
-feed_entries = [(url, datetime.datetime.strptime(date, "%Y-%m-%d")) for url, date in config["feed"].items()]
 
+feed_entries = [(url, datetime.datetime.strptime(date, "%Y-%m-%d")) for url, date in config["feed"].items()]
 page_id_to_url = {page_id: url for url, page_id in config["urls"].items()}
 
 for url, _ in feed_entries:
@@ -116,9 +116,18 @@ def wrap_link(content: str, link: str) -> str:
     return f'<a href="{link}">{content}</a>'
 
 
+def get_page_link(page_id: str) -> str:
+    page = get_page(page_id)
+    return get_link(get_url(page_id), get_page_title(page), (page.get("icon") or {}).get("emoji"))
+
+
 def build_text(text_items: list[dict]) -> str:
     html = ""
     for item in text_items:
+        if item["type"] == "mention" and item["mention"]["type"] == "page":
+            mention_id = item["mention"]["page"]["id"]
+            html += get_page_link(mention_id)
+            continue
         assert item["type"] == "text"
         content = escape(item["text"]["content"])
         link = item["text"]["link"]
@@ -150,11 +159,6 @@ def get_link(url: str, title: str, icon: Optional[str]) -> str:
         emoji = f'<span style="font-size: 1.2em; margin-right: 5px;">{icon}</span>'
         link = emoji + link
     return f'<div class="page-link">{link}</div>'
-
-
-def get_page_link(page_id: str) -> str:
-    page = get_page(page_id)
-    return get_link(get_url(page_id), get_page_title(page), (page.get("icon") or {}).get("emoji"))
 
 
 def build_children(root_block_id: str) -> str:
