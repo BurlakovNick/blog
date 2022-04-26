@@ -225,7 +225,8 @@ def build_children(root_block_id: str) -> str:
         elif block_type == "embed" and "github" in block["embed"]["url"]:
             content = f'<script src="{block["embed"]["url"]}.js"></script>'
         elif block_type == "video":
-            content = f'<iframe src="{block["video"]["external"]["url"]}" frameborder="0" ' \
+            video_url = block["video"]["external"]["url"] + "&feature=oembed"
+            content = f'<iframe src="{video_url}" frameborder="0" ' \
                       f'sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation ' \
                       f'allow-forms allow-same-origin" allowfullscreen></iframe>'
         else:
