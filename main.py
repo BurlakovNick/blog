@@ -113,7 +113,7 @@ def wrap(content: str, tag: str) -> str:
 
 
 def wrap_link(content: str, link: str) -> str:
-    return f'<a href="{link}">{content}</a>'
+    return f'<a href="{link}" target="_blank">{content}</a>'
 
 
 def get_page_link(page_id: str) -> str:
@@ -224,6 +224,8 @@ def build_children(root_block_id: str) -> str:
             content = ""
         elif block_type == "embed" and "github" in block["embed"]["url"]:
             content = f'<script src="{block["embed"]["url"]}.js"></script>'
+        elif block_type == "video":
+            content = f'<iframe src="{block["video"]["external"]["url"]}"></iframe>'
         else:
             raise RuntimeError(f"Unknown block type {block['type']}")
 
@@ -233,7 +235,7 @@ def build_children(root_block_id: str) -> str:
 
 def build_html(page: dict, page_id: str) -> str:
     title = get_page_title(page)
-    icon = page["icon"]["emoji"]
+    icon = (page.get("icon") or {}).get("emoji")
     print(f"Page id: {page_id}, title: {title}")
 
     if page_id != main_page_id:
