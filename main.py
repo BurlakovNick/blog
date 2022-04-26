@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import re
 import urllib.request
 import configparser
 import xml.etree.ElementTree
@@ -224,11 +225,13 @@ def build_children(root_block_id: str) -> str:
             content = ""
         elif block_type == "embed" and "github" in block["embed"]["url"]:
             content = f'<script src="{block["embed"]["url"]}.js"></script>'
-        elif block_type == "video":
-            video_url = block["video"]["external"]["url"] + "&feature=oembed"
-            content = f'<iframe src="{video_url}" frameborder="0" ' \
+        elif block_type == "video" and "youtube" in block["video"]["external"]["url"]:
+            regex_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", block["video"]["external"]["url"])
+            video_id = regex_match.group(1)
+            video_url = f"https://www.youtube.com/embed/{video_id}?feature=oembed&rel=0&controls=0"
+            content = f'<div class="video"><iframe src="{video_url}" frameborder="0" ' \
                       f'sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation ' \
-                      f'allow-forms allow-same-origin" allowfullscreen></iframe>'
+                      f'allow-forms allow-same-origin" allowfullscreen></iframe></div>'
         else:
             raise RuntimeError(f"Unknown block type {block['type']}")
 
